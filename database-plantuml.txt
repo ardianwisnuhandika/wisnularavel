@@ -1,0 +1,157 @@
+@startuml Wisnu Bicycle Shop Database Diagram
+
+' Styling dan konfigurasi
+!define TABLE_BORDER_COLOR #2c3e50
+!define PRIMARY_KEY_BG_COLOR #ffcc00
+!define FOREIGN_KEY_BG_COLOR #b3e5fc
+!define TABLE_BG_COLOR #eceff1
+!define SYSTEM_TABLE_BG_COLOR #e8f5e9
+!define AUTH_TABLE_BG_COLOR #fff3e0
+
+skinparam {
+  ClassBackgroundColor TABLE_BG_COLOR
+  ClassBorderColor TABLE_BORDER_COLOR
+  ClassBorderThickness 2
+  ClassFontColor #2c3e50
+  ClassFontSize 14
+  ClassFontName "Roboto"
+  
+  TitleFontSize 20
+  TitleFontColor #2c3e50
+  TitleFontName "Roboto"
+  
+  PackageBackgroundColor transparent
+  PackageBorderColor #78909c
+  PackageBorderThickness 1
+  PackageFontColor #546e7a
+  
+  ArrowColor #546e7a
+  ArrowThickness 1.5
+}
+
+title "GO WIZ Bicycle Shop - Database Schema"
+
+' Packages untuk pengelompokan logis
+package "Autentikasi" as Auth #fff3e0 {
+  class "Users" as Users <<(T,#ffcc00) Table>> {
+    <color:#ffcc00><&key></color> id: bigint(20) <<PK>>
+    --
+    name: varchar(255)
+    email: varchar(255) <<unique>>
+    email_verified_at: timestamp <<nullable>>
+    password: varchar(255)
+    remember_token: varchar(100) <<nullable>>
+    --
+    created_at: timestamp <<nullable>>
+    updated_at: timestamp <<nullable>>
+  }
+  
+  class "PasswordResetTokens" as PasswordResetTokens <<(T,#ffcc00) Table>> {
+    <color:#ffcc00><&key></color> email: varchar(255) <<PK>>
+    --
+    token: varchar(255)
+    created_at: timestamp <<nullable>>
+  }
+  
+  class "PersonalAccessTokens" as PersonalAccessTokens <<(T,#ffcc00) Table>> {
+    <color:#ffcc00><&key></color> id: bigint(20) <<PK>>
+    --
+    <color:#b3e5fc><&link-intact></color> tokenable_type: varchar(255)
+    <color:#b3e5fc><&link-intact></color> tokenable_id: bigint(20)
+    name: varchar(255)
+    token: varchar(64) <<unique>>
+    abilities: text <<nullable>>
+    last_used_at: timestamp <<nullable>>
+    expires_at: timestamp <<nullable>>
+    --
+    created_at: timestamp <<nullable>>
+    updated_at: timestamp <<nullable>>
+  }
+}
+
+package "Konten" as Content #e3f2fd {
+  class "Products" as Products <<(T,#ffcc00) Table>> {
+    <color:#ffcc00><&key></color> id: bigint(20) <<PK>>
+    --
+    nama: varchar(255)
+    harga: integer
+    stok: integer
+    deskripsi: text
+    gambar: varchar(255) <<nullable>>
+    kategori: varchar(50) <<nullable>>
+    --
+    created_at: timestamp <<nullable>>
+    updated_at: timestamp <<nullable>>
+  }
+}
+
+package "System" as System #e8f5e9 {
+  class "FailedJobs" as FailedJobs <<(T,#ffcc00) Table>> {
+    <color:#ffcc00><&key></color> id: bigint(20) <<PK>>
+    --
+    uuid: varchar(255) <<unique>>
+    connection: text
+    queue: text
+    payload: longtext
+    exception: longtext
+    failed_at: timestamp
+  }
+  
+  class "Migrations" as Migrations <<(T,#ffcc00) Table>> {
+    <color:#ffcc00><&key></color> id: bigint(20) <<PK>>
+    --
+    migration: varchar(255)
+    batch: integer
+  }
+}
+
+' Contoh relasi lain yang mungkin ada di masa depan (dengan warna dan label yang jelas)
+package "Transaksi" as Transaction #e1f5fe {
+  class "Orders" as Orders <<(T,#aaaaaa) Future>> {
+    <color:#ffcc00><&key></color> id: bigint(20) <<PK>>
+    <color:#b3e5fc><&link-intact></color> user_id: bigint(20) <<FK>>
+    --
+    total_harga: decimal(10,2)
+    status: enum('pending','paid','shipped','completed','cancelled')
+    alamat_pengiriman: text
+    metode_pembayaran: varchar(50)
+    --
+    created_at: timestamp
+    updated_at: timestamp
+  }
+  
+  class "OrderDetails" as OrderDetails <<(T,#aaaaaa) Future>> {
+    <color:#ffcc00><&key></color> id: bigint(20) <<PK>>
+    <color:#b3e5fc><&link-intact></color> order_id: bigint(20) <<FK>>
+    <color:#b3e5fc><&link-intact></color> product_id: bigint(20) <<FK>>
+    --
+    quantity: integer
+    harga_satuan: decimal(10,2)
+    subtotal: decimal(10,2)
+    --
+    created_at: timestamp
+    updated_at: timestamp
+  }
+}
+
+' Relasi antar tabel
+Users "1" -right-o{ PersonalAccessTokens : "memiliki"
+Users "1" -down-o{ PasswordResetTokens : "memiliki"
+
+' Relasi masa depan (dengan garis putus-putus)
+Users "1" .down.o{ Orders : "membuat"
+Products "1" .right.o{ OrderDetails : "termasuk dalam"
+Orders "1" .right.o{ OrderDetails : "berisi"
+
+' Legenda
+legend
+  <color:#ffcc00><&key></color> Primary Key
+  <color:#b3e5fc><&link-intact></color> Foreign Key
+  -- Kelompok Tabel --
+  <back:#fff3e0>   Autentikasi   </back>
+  <back:#e3f2fd>   Konten   </back>
+  <back:#e8f5e9>   System   </back>
+  <back:#e1f5fe>   Transaksi (Future)   </back>
+endlegend
+
+@enduml 
